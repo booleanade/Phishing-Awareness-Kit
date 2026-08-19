@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Lock, ArrowRight, AlertCircle, CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, CheckCircle2, Mail, KeyRound, Loader2, ShieldAlert } from 'lucide-react';
 import { User } from '../../types';
-import { ApiService } from '../../services/api';
 import { StorageService } from '../../services/storage';
-import { signInWithGoogleSupabase, isSupabaseConfigured } from '../../lib/supabase';
+import { signInAdminWithPassword, isSupabaseReady } from '../../lib/supabase';
 
 interface AdminLoginViewProps {
   onAdminAuthenticated: (user: User) => void;
@@ -14,69 +13,58 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
   onAdminAuthenticated,
   onNavigateHome
 }) => {
-  const [passcode, setPasscode] = useState('');
-  const [adminEmail, setAdminEmail] = useState('blessingadeya@gmail.com');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [authMethod, setAuthMethod] = useState<'google' | 'passcode' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleGoogleAdminLogin = async () => {
-    setError(null);
-    setAuthMethod('google');
-    setLoading(true);
-    try {
-      if (!isSupabaseConfigured) {
-        throw new Error('Supabase environment variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) must be configured in Vercel. In the meantime, use your Admin Passcode below.');
-      }
-      await signInWithGoogleSupabase('ICT');
-    } catch (err: any) {
-      setError(err.message || 'Google Administrator Sign-In failed.');
-      setLoading(false);
-      setAuthMethod(null);
-    }
-  };
-
-  const handlePasscodeLogin = async (e: React.FormEvent) => {
+  const handleAdminEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !password) {
+      setError('Please enter both your administrator email and password.');
+      return;
+    }
+
     setError(null);
-    setAuthMethod('passcode');
     setLoading(true);
 
     try {
-      let isValid = passcode.trim() === 'CYBER_ADMIN_2025' || passcode.trim() === 'admin123' || passcode.trim() === 'admin';
-      
-      try {
-        const res = await ApiService.verifyAdminPasscode(passcode.trim());
-        if (res.success) isValid = true;
-      } catch {
-        // Fallback to local check
+      if (!isSupabaseReady()) {
+        throw new Error('Supabase environment variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) must be configured in Vercel. Please ensure they are added and your build is redeployed.');
       }
 
-      if (isValid) {
-        setSuccess('Administrator access verified.');
-        const adminUser: User = {
-          id: 'admin_blessing',
-          name: 'Blessing Adeya',
-          email: adminEmail.trim() || 'blessingadeya@gmail.com',
-          role: 'admin',
-          department: 'ICT',
-          status: 'active',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-          createdAt: new Date().toISOString()
-        };
-        StorageService.setCurrentUser(adminUser.id);
-        setTimeout(() => {
-          onAdminAuthenticated(adminUser);
-        }, 400);
-      } else {
-        setError('Invalid Administrator Passcode. (Try default: admin123 or CYBER_ADMIN_2025)');
-      }
+      const sbUser = await signInAdminWithPassword(email, password);
+
+      setSuccess('Administrator access verified.');
+
+      const adminUser: User = {
+        id: sbUser.id,
+        name: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || 'Administrator',
+        email: sbUser.email || email.trim().toLowerCase(),
+        role: 'admin',
+        department: 'ICT',
+        status: 'active',
+        avatarUrl: sbUser.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        createdAt: sbUser.created_at || new Date().toISOString()
+      };
+
+      StorageService.setCurrentUser(adminUser.id);
+      setTimeout(() => {
+        onAdminAuthenticated(adminUser);
+      }, 400);
     } catch (err: any) {
-      setError(err.message || 'Verification error occurred.');
+      console.error('Admin login error:', err);
+      // Clean friendly message for Supabase auth errors
+      if (err.message?.includes('Invalid login credentials')) {
+        setError('Invalid admin email or password. Please verify your credentials in Supabase.');
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Your email is not confirmed in Supabase. Please confirm it in Supabase Auth or disable "Confirm email" in Supabase settings.');
+      } else {
+        setError(err.message || 'Authentication failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
-      setAuthMethod(null);
     }
   };
 
@@ -89,109 +77,94 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({
           <div className="w-14 h-14 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-inner">
             <Lock className="w-7 h-7" />
           </div>
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-blue-950/70 border border-blue-800/80 text-[11px] font-semibold text-blue-300 mb-2.5">
+            <ShieldAlert className="w-3.5 h-3.5 text-blue-400" />
+            <span>Restricted Administrator Route (/admin)</span>
+          </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
             Security Administration Portal
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Restricted Management & Threat Oversight Access
+            Sign in with your Supabase administrator email & password
           </p>
         </div>
 
         {error && (
-          <div className="mb-5 p-3.5 rounded-xl bg-rose-950/50 border border-rose-800/80 text-rose-300 text-xs flex items-start space-x-2.5">
+          <div className="mb-5 p-3.5 rounded-xl bg-rose-950/60 border border-rose-800/80 text-rose-300 text-xs flex items-start space-x-2.5">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
             <span className="leading-relaxed">{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="mb-5 p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800/80 text-emerald-300 text-xs flex items-start space-x-2.5">
+          <div className="mb-5 p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 text-xs flex items-start space-x-2.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <span>{success}</span>
           </div>
         )}
 
-        {/* Google Admin Login */}
-        <div className="space-y-4">
-          <button
-            id="admin_google_login_btn"
-            type="button"
-            disabled={loading}
-            onClick={handleGoogleAdminLogin}
-            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition flex items-center justify-center space-x-3 shadow-xs disabled:opacity-50 cursor-pointer"
-          >
-            {loading && authMethod === 'google' ? (
-              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-            ) : (
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-            )}
-            <span>Sign in with Google (Supabase)</span>
-          </button>
-
-          <div className="flex items-center my-3">
-            <div className="flex-1 border-t border-slate-800" />
-            <span className="px-3 text-[11px] font-medium text-slate-500 uppercase tracking-wider">Or Enter Security Passcode</span>
-            <div className="flex-1 border-t border-slate-800" />
+        {/* Email & Password Admin Form */}
+        <form onSubmit={handleAdminEmailPasswordLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Admin Email</span>
+              <Mail className="w-3.5 h-3.5 text-slate-500" />
+            </label>
+            <input
+              id="admin_email_input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@company.com"
+              required
+              autoComplete="email"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+            />
           </div>
 
-          <form onSubmit={handlePasscodeLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Admin Passcode</span>
-                <KeyRound className="w-3.5 h-3.5 text-slate-500" />
-              </label>
-              <input
-                id="admin_passcode_input"
-                type="password"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Enter passcode (e.g. admin123)..."
-                required
-                className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Admin Password</span>
+              <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+            </label>
+            <input
+              id="admin_password_input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••••"
+              required
+              autoComplete="current-password"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-hidden focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+            />
+          </div>
 
-            <button
-              id="admin_passcode_submit_btn"
-              type="submit"
-              disabled={loading || !passcode}
-              className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm transition flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-            >
-              {loading && authMethod === 'passcode' ? (
+          <button
+            id="admin_login_submit_btn"
+            type="submit"
+            disabled={loading || !email.trim() || !password}
+            className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer shadow-sm hover:shadow"
+          >
+            {loading ? (
+              <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
-              ) : (
-                <>
-                  <span>Verify Passcode</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-        </div>
+                <span>Authenticating Admin...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In to Admin Portal</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </form>
 
         <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
           <button
             onClick={onNavigateHome}
             className="text-xs text-slate-400 hover:text-white transition font-medium cursor-pointer"
           >
-            &larr; Return to Training Portal
+            &larr; Return to Employee Training Portal
           </button>
         </div>
 

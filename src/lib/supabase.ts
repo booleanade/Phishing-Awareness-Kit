@@ -63,7 +63,59 @@ export function getSupabaseClient(): SupabaseClient {
 
 export const supabase = getSupabaseClient();
 
-export async function signInWithGoogleSupabase(department?: string) {
+/**
+ * Checks if a Supabase user is an administrator based on backend Supabase auth metadata or profile table
+ */
+export function checkIsAdminUser(sbUser: any): boolean {
+  if (!sbUser) return false;
+  const email = (sbUser.email || '').toLowerCase().trim();
+  const appRole = sbUser.app_metadata?.role;
+  const userRole = sbUser.user_metadata?.role;
+  const isAdminFlag = sbUser.user_metadata?.is_admin || sbUser.app_metadata?.is_admin;
+  
+  if (appRole === 'admin' || userRole === 'admin' || isAdminFlag === true || isAdminFlag === 'true') {
+    return true;
+  }
+
+  if (email === 'blessingadeya@gmail.com' || email.startsWith('admin@')) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Supabase Email + Password Login strictly for Administrators
+ */
+export async function signInAdminWithPassword(email: string, password: string) {
+  const { url, anonKey } = getSupabaseCredentials();
+  if (!url || !anonKey || url.includes('placeholder')) {
+    throw new Error('Supabase configuration missing in environment. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.');
+  }
+
+  const client = getSupabaseClient();
+  const { data, error } = await client.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password: password
+  });
+
+  if (error) throw error;
+
+  if (!data.user) {
+    throw new Error('Authentication failed. No user profile returned.');
+  }
+
+  // Strict check: Non-admin accounts MUST be restricted
+  const isAdmin = checkIsAdminUser(data.user);
+  if (!isAdmin) {
+    await client.auth.signOut();
+    throw new Error('Access Restricted: This account does not possess administrator privileges. Access to the /admin portal is restricted.');
+  }
+
+  return data.user;
+}
+
+export async function signInWithGoogleSupabase(department?: string, redirectPath?: string) {
   if (department && typeof window !== 'undefined') {
     try {
       localStorage.setItem('pak_selected_department', department);
@@ -74,14 +126,17 @@ export async function signInWithGoogleSupabase(department?: string) {
 
   const { url, anonKey } = getSupabaseCredentials();
   if (!url || !anonKey || url.includes('placeholder')) {
-    throw new Error('Supabase environment variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) are missing. If you just added them in Vercel, please trigger a Redeploy in Vercel to bake the variables into your build.');
+    throw new Error('Supabase environment variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) were not detected. Please verify your Vercel Project Settings and trigger a Redeploy.');
   }
+
+  const targetPath = redirectPath || (typeof window !== 'undefined' ? window.location.pathname : '/');
+  const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}${targetPath}` : '';
 
   const client = getSupabaseClient();
   const { data, error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: redirectUrl,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent'

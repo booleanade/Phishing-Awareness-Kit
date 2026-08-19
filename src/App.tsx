@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Simulation, Department } from './types';
 import { StorageService } from './services/storage';
-import { supabase, isSupabaseConfigured, signOutSupabase } from './lib/supabase';
+import { supabase, isSupabaseConfigured, signOutSupabase, checkIsAdminUser } from './lib/supabase';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { LandingPage } from './components/landing/LandingPage';
@@ -29,7 +29,7 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [reportSimulationData, setReportSimulationData] = useState<Simulation | null>(null);
 
-  // Check URL query / hash for separate admin route
+  // Check URL query / hash / path for separate admin route
   const checkIsAdminPath = () => {
     const search = window.location.search;
     const hash = window.location.hash;
@@ -38,23 +38,42 @@ export default function App() {
       search.includes('admin=true') ||
       search.includes('path=admin') ||
       hash.includes('admin') ||
-      path === '/admin'
+      path === '/admin' ||
+      path.startsWith('/admin')
     );
   };
 
   const handleSupabaseUser = (sbUser: any) => {
-    const storedDepartment = (localStorage.getItem('pak_selected_department') as Department) || 'Operations';
+    const isAdmin = checkIsAdminUser(sbUser);
+    const onAdminRoute = checkIsAdminPath();
     const email = sbUser.email || '';
     const name = sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || email.split('@')[0];
     const avatarUrl = sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.picture || '';
-    const isAdmin = email.toLowerCase() === 'blessingadeya@gmail.com' || email.toLowerCase().includes('admin');
-    const role: 'admin' | 'staff' = isAdmin ? 'admin' : 'staff';
+    const storedDepartment = (localStorage.getItem('pak_selected_department') as Department) || 'Operations';
 
+    // Enforcement: Admin accounts can ONLY sign in from /admin
+    if (isAdmin && !onAdminRoute) {
+      alert('Administrator Account Detected: Security policy requires administrators to authenticate strictly through the /admin portal. Redirecting to /admin...');
+      window.history.pushState({}, '', '/admin');
+      setCurrentView('admin_login');
+      return;
+    }
+
+    // Enforcement: Non-admins cannot access /admin
+    if (!isAdmin && onAdminRoute) {
+      alert('Access Denied: Your account does not have administrator privileges in Supabase. Please sign in via the employee portal.');
+      window.history.pushState({}, '', '/');
+      setCurrentView('landing');
+      return;
+    }
+
+    // Valid authenticated session
+    const role: 'admin' | 'staff' = isAdmin ? 'admin' : 'staff';
     const user: User = {
       id: sbUser.id,
       name,
       email,
-      department: storedDepartment,
+      department: isAdmin ? 'ICT' : storedDepartment,
       role,
       avatarUrl,
       status: 'active',
@@ -64,7 +83,7 @@ export default function App() {
     StorageService.setCurrentUser(user.id);
     setCurrentUser(user);
 
-    if (role === 'admin' || checkIsAdminPath()) {
+    if (isAdmin) {
       setCurrentView('admin_dashboard');
     } else {
       setCurrentView((prev) => (prev === 'landing' || prev === 'admin_login' ? 'staff_dashboard' : prev));
@@ -75,20 +94,24 @@ export default function App() {
     // Storage initialization
     StorageService.init();
 
-    // Check if initial URL is admin path
-    if (checkIsAdminPath()) {
-      setCurrentView('admin_login');
-    }
+    const onAdminRoute = checkIsAdminPath();
 
     // Load active session from local storage fallback
     const savedUser = StorageService.getCurrentUser();
     if (savedUser) {
-      setCurrentUser(savedUser);
-      if (savedUser.role === 'admin' || checkIsAdminPath()) {
+      if (savedUser.role === 'admin' && onAdminRoute) {
+        setCurrentUser(savedUser);
         setCurrentView('admin_dashboard');
-      } else {
+      } else if (savedUser.role === 'staff' && !onAdminRoute) {
+        setCurrentUser(savedUser);
         setCurrentView('staff_dashboard');
+      } else if (onAdminRoute) {
+        setCurrentView('admin_login');
+      } else {
+        setCurrentView('landing');
       }
+    } else if (onAdminRoute) {
+      setCurrentView('admin_login');
     }
 
     // Listen to Supabase Google OAuth Session
@@ -145,8 +168,8 @@ export default function App() {
     StorageService.setCurrentUser(null);
     setCurrentUser(null);
     setCurrentView('landing');
-    if (window.location.hash || window.location.search) {
-      window.history.pushState({}, '', window.location.pathname);
+    if (window.location.hash || window.location.search || window.location.pathname === '/admin') {
+      window.history.pushState({}, '', '/');
     }
   };
 
@@ -179,7 +202,7 @@ export default function App() {
       {/* Main View Router */}
       <main className="flex-1">
         
-        {/* Dedicated Admin Login Route */}
+        {/* Dedicated Admin Login Route (/admin) */}
         {currentView === 'admin_login' && (
           <AdminLoginView
             onAdminAuthenticated={(adminUser) => {
@@ -188,7 +211,7 @@ export default function App() {
               setCurrentView('admin_dashboard');
             }}
             onNavigateHome={() => {
-              window.history.pushState({}, '', window.location.pathname);
+              window.history.pushState({}, '', '/');
               setCurrentView('landing');
             }}
           />
