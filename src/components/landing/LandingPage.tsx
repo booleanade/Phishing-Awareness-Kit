@@ -42,7 +42,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Friendly Badge */}
             <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-xs font-semibold text-blue-700 mb-6">
               <Shield className="w-4 h-4 text-blue-600" />
-              <span>PhishGuard Security Awareness &bull; Employee Training</span>
+              <span>Phishing Awareness Kit &bull; Employee Training</span>
             </div>
 
             {/* Headline */}

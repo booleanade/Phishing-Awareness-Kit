@@ -52,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-bold text-base tracking-tight text-slate-900">
-                  PhishGuard <span className="text-blue-600 font-semibold">Awareness</span>
+                  Phishing <span className="text-blue-600 font-semibold">Awareness Kit</span>
                 </span>
                 <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
                   Employee Training

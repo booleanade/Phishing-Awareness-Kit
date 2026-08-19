@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Lock, CheckCircle2, Award, Code2, HelpCircle } from 'lucide-react';
+import { Shield, Lock, CheckCircle2, Award, ShieldAlert, HelpCircle } from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (view: string) => void;
@@ -19,7 +19,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-xs">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-slate-900 tracking-tight">PhishGuard Awareness</span>
+              <span className="font-bold text-slate-900 tracking-tight">Phishing Awareness Kit</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
               Empowering team members with practical skills to spot, avoid, and report phishing and social engineering attacks safely.
@@ -35,31 +35,31 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Training Steps</h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <button onClick={() => onNavigate('pre_test')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600">
+                <button onClick={() => onNavigate('pre_test')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600 cursor-pointer">
                   <span className="font-semibold text-slate-400">1.</span>
                   <span>Baseline Assessment (3 mins)</span>
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('lessons')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600">
+                <button onClick={() => onNavigate('lessons')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600 cursor-pointer">
                   <span className="font-semibold text-slate-400">2.</span>
                   <span>Interactive Lessons</span>
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('simulations')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600">
+                <button onClick={() => onNavigate('simulations')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600 cursor-pointer">
                   <span className="font-semibold text-slate-400">3.</span>
                   <span>Inbox Email Practice</span>
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('quiz')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600">
+                <button onClick={() => onNavigate('quiz')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600 cursor-pointer">
                   <span className="font-semibold text-slate-400">4.</span>
                   <span>Final Knowledge Quiz</span>
                 </button>
               </li>
               <li>
-                <button onClick={() => onNavigate('certificate')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600">
+                <button onClick={() => onNavigate('certificate')} className="hover:text-blue-600 transition flex items-center space-x-1.5 text-slate-600 cursor-pointer">
                   <Award className="w-3.5 h-3.5 text-amber-500" />
                   <span>Completion Certificate</span>
                 </button>
@@ -90,19 +90,19 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </ul>
           </div>
 
-          {/* Col 4: IT & Deployment */}
+          {/* Col 4: IT & Security */}
           <div>
-            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Organization Tools</h4>
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Security & Oversight</h4>
             <p className="text-xs text-slate-500 mb-3">
-              Self-contained awareness program for enterprise deployment or course assessment.
+              Cybersecurity resilience program for enterprise security and staff training verification.
             </p>
             <div className="space-y-2">
               <button
-                onClick={() => onNavigate('deployment')}
-                className="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 border border-slate-200 transition"
+                onClick={() => onNavigate('report')}
+                className="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 border border-rose-200 transition cursor-pointer"
               >
-                <Code2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>PHP/MySQL Package</span>
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>Report Suspicious Email</span>
               </button>
             </div>
           </div>
@@ -111,7 +111,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
         {/* Copyright */}
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
-          <p>&copy; 2026 PhishGuard &bull; Cybersecurity Awareness & Employee Training Kit.</p>
+          <p>&copy; 2026 Phishing Awareness Kit &bull; Cybersecurity Awareness & Employee Training.</p>
           <div className="flex items-center space-x-4 mt-2 sm:mt-0">
             <span className="flex items-center space-x-1 text-slate-600">
               <Lock className="w-3.5 h-3.5 text-emerald-600" />
