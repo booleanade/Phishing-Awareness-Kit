@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Shield, BookOpen, MailWarning, GraduationCap, Award, BarChart3, Code2, AlertTriangle, LogOut, ChevronDown, UserCheck } from 'lucide-react';
 import { User } from '../../types';
 import { StorageService } from '../../services/storage';
-import { auth } from '../../lib/firebase';
-import { signOut } from 'firebase/auth';
 
 interface NavbarProps {
   currentUser: User | null;
@@ -25,12 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.error('Error signing out of Firebase:', err);
-    }
+  const handleSignOut = () => {
     setUserDropdownOpen(false);
     if (onLogout) {
       onLogout();

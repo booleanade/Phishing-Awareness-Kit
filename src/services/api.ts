@@ -1,19 +1,9 @@
-import { auth } from '../lib/firebase';
 import { User, UserProgress, PhishingReport, SimulationAttempt, QuizAttempt } from '../types';
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) return {};
-  try {
-    const token = await currentUser.getIdToken();
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
-  } catch (err) {
-    console.error('Error getting auth token:', err);
-    return { 'Content-Type': 'application/json' };
-  }
+  return {
+    'Content-Type': 'application/json'
+  };
 }
 
 export const ApiService = {

@@ -4,11 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Simulation } from './types';
+import { User, Simulation, Department } from './types';
 import { StorageService } from './services/storage';
-import { ApiService } from './services/api';
-import { auth } from './lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { supabase, isSupabaseConfigured, signOutSupabase } from './lib/supabase';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { LandingPage } from './components/landing/LandingPage';
@@ -30,7 +28,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<string>('landing');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [reportSimulationData, setReportSimulationData] = useState<Simulation | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Check URL query / hash for separate admin route
   const checkIsAdminPath = () => {
@@ -45,6 +42,35 @@ export default function App() {
     );
   };
 
+  const handleSupabaseUser = (sbUser: any) => {
+    const storedDepartment = (localStorage.getItem('pak_selected_department') as Department) || 'Operations';
+    const email = sbUser.email || '';
+    const name = sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || email.split('@')[0];
+    const avatarUrl = sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.picture || '';
+    const isAdmin = email.toLowerCase() === 'blessingadeya@gmail.com' || email.toLowerCase().includes('admin');
+    const role: 'admin' | 'staff' = isAdmin ? 'admin' : 'staff';
+
+    const user: User = {
+      id: sbUser.id,
+      name,
+      email,
+      department: storedDepartment,
+      role,
+      avatarUrl,
+      status: 'active',
+      createdAt: sbUser.created_at || new Date().toISOString()
+    };
+
+    StorageService.setCurrentUser(user.id);
+    setCurrentUser(user);
+
+    if (role === 'admin' || checkIsAdminPath()) {
+      setCurrentView('admin_dashboard');
+    } else {
+      setCurrentView((prev) => (prev === 'landing' || prev === 'admin_login' ? 'staff_dashboard' : prev));
+    }
+  };
+
   useEffect(() => {
     // Storage initialization
     StorageService.init();
@@ -54,49 +80,39 @@ export default function App() {
       setCurrentView('admin_login');
     }
 
-    // Listen for Firebase Google Auth state
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email) {
-        try {
-          const synced = await ApiService.syncAuthUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            department: 'Operations'
-          });
-
-          setCurrentUser(synced.user);
-          StorageService.setCurrentUser(synced.user.id);
-
-          // Update local progress with backend data
-          if (synced.progress) {
-            StorageService.updateUserProgress(synced.user.id, synced.progress);
-          }
-
-          if (checkIsAdminPath() || synced.user.role === 'admin') {
-            setCurrentView('admin_dashboard');
-          } else {
-            setCurrentView((prev) => (prev === 'landing' || prev === 'admin_login' ? 'staff_dashboard' : prev));
-          }
-        } catch (err) {
-          console.error('Error syncing auth user on startup:', err);
-        }
+    // Load active session from local storage fallback
+    const savedUser = StorageService.getCurrentUser();
+    if (savedUser) {
+      setCurrentUser(savedUser);
+      if (savedUser.role === 'admin' || checkIsAdminPath()) {
+        setCurrentView('admin_dashboard');
       } else {
-        // Not authenticated
-        if (checkIsAdminPath()) {
-          setCurrentView('admin_login');
-        } else {
-          setCurrentUser(null);
-        }
+        setCurrentView('staff_dashboard');
       }
-      setLoadingAuth(false);
-    });
+    }
+
+    // Listen to Supabase Google OAuth Session
+    let authSubscription: { unsubscribe: () => void } | null = null;
+    if (isSupabaseConfigured) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          handleSupabaseUser(session.user);
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          handleSupabaseUser(session.user);
+        }
+      });
+      authSubscription = subscription;
+    }
 
     // Listen to popstate / hash change
     const handleUrlChange = () => {
       if (checkIsAdminPath()) {
-        if (currentUser && currentUser.role === 'admin') {
+        const active = StorageService.getCurrentUser();
+        if (active && active.role === 'admin') {
           setCurrentView('admin_dashboard');
         } else {
           setCurrentView('admin_login');
@@ -108,7 +124,7 @@ export default function App() {
     window.addEventListener('hashchange', handleUrlChange);
 
     return () => {
-      unsubscribe();
+      if (authSubscription) authSubscription.unsubscribe();
       window.removeEventListener('popstate', handleUrlChange);
       window.removeEventListener('hashchange', handleUrlChange);
     };
@@ -125,11 +141,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.error(err);
-    }
+    await signOutSupabase();
     StorageService.setCurrentUser(null);
     setCurrentUser(null);
     setCurrentView('landing');
