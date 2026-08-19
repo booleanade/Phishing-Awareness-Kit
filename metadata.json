@@ -1,0 +1,6 @@
+{
+  "name": "Phishing Awareness Kit",
+  "description": "A comprehensive cybersecurity awareness and phishing-resilience platform for staff training, simulations, quizzes, pre/post-assessments, incident reporting, and administrative security metrics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
