@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, BookOpen, MailWarning, GraduationCap, Award, BarChart3, Code2, AlertTriangle, LogOut, ChevronDown, UserCheck } from 'lucide-react';
+import { Shield, BookOpen, MailWarning, GraduationCap, Award, BarChart3, AlertTriangle, LogOut, ChevronDown, UserCheck } from 'lucide-react';
 import { User } from '../../types';
 import { StorageService } from '../../services/storage';
 
@@ -139,16 +139,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
                   <span>Admin Dashboard</span>
-                </button>
-                <button
-                  id="nav_btn_docs_export"
-                  onClick={() => onNavigate('deployment')}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold tracking-normal transition flex items-center space-x-1.5 text-slate-700 bg-slate-100 hover:bg-slate-200 ${
-                    currentView === 'deployment' ? 'bg-blue-50 text-blue-700 font-bold' : ''
-                  }`}
-                >
-                  <Code2 className="w-3.5 h-3.5" />
-                  <span>PHP/SQL Package</span>
                 </button>
               </>
             )}

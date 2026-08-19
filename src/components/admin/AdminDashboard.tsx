@@ -12,8 +12,7 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  AlertTriangle,
-  Code2
+  AlertTriangle
 } from 'lucide-react';
 import { User, UserProgress, PhishingReport } from '../../types';
 import { StorageService } from '../../services/storage';
@@ -93,18 +92,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser, onN
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition flex items-center space-x-2"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition flex items-center space-x-2 shadow-xs cursor-pointer"
             >
               <Download className="w-4 h-4 text-slate-600" />
               <span>Export CSV Report</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('deployment')}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm transition flex items-center space-x-2 shadow-xs"
-            >
-              <Code2 className="w-4 h-4" />
-              <span>PHP / MySQL Package</span>
             </button>
           </div>
         </div>

@@ -20,7 +20,6 @@ import { PostTestView } from './components/staff/PostTestView';
 import { ReportPhishingView } from './components/staff/ReportPhishingView';
 import { CertificateView } from './components/staff/CertificateView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
-import { DeploymentPackageView } from './components/admin/DeploymentPackageView';
 import { AdminLoginView } from './components/admin/AdminLoginView';
 
 export default function App() {
@@ -297,13 +296,6 @@ export default function App() {
         {/* Admin Views */}
         {currentView === 'admin_dashboard' && currentUser && (
           <AdminDashboard
-            currentUser={currentUser}
-            onNavigate={handleNavigate}
-          />
-        )}
-
-        {currentView === 'deployment' && currentUser && (
-          <DeploymentPackageView
             currentUser={currentUser}
             onNavigate={handleNavigate}
           />
