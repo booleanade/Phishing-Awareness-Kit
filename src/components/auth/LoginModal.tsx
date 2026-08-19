@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Shield, AlertCircle, Building, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, Shield, AlertCircle, Building, Loader2 } from 'lucide-react';
 import { User, Department } from '../../types';
-import { signInWithGoogleSupabase, isSupabaseConfigured } from '../../lib/supabase';
+import { signInWithGoogleSupabase, isSupabaseReady } from '../../lib/supabase';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -24,9 +24,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setLoading(true);
 
     try {
-      if (!isSupabaseConfigured) {
+      if (!isSupabaseReady()) {
         throw new Error(
-          'Supabase environment variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) are required for Google OAuth. Please add them in your Vercel Project Settings.'
+          'Supabase environment variables (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY) were not detected in the current build. If you just configured them in Vercel, please trigger a Redeploy in Vercel Dashboard.'
         );
       }
 
@@ -73,7 +73,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
           {/* Department Selection */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
               <span>Your Department</span>
               <Building className="w-3.5 h-3.5 text-slate-400" />
             </label>
